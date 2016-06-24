@@ -29,6 +29,14 @@ describe ServerHealthCheck do
           expect(health_check.ok?).to eq false
         end
       end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.redis! rescue true
+          results = health_check.results
+          expect(results).to eq redis: 'The Redis gem is not loaded'
+        end
+      end
     end
 
     context "when redis is not reachable" do
@@ -44,6 +52,14 @@ describe ServerHealthCheck do
         it 'returns false' do
           health_check.redis!
           expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.redis!
+          results = health_check.results
+          expect(results).to eq redis: 'Redis::CannotConnectError'
         end
       end
     end
@@ -64,6 +80,13 @@ describe ServerHealthCheck do
         end
       end
 
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.redis!
+          results = health_check.results
+          expect(results).to eq redis: 'OK'
+        end
+      end
     end
   end
 end

@@ -1,27 +1,33 @@
 require "server_health_check/version"
 
 class ServerHealthCheck
+  OK = 'OK'
+
   def initialize
-    @checks = {}
+    @results = {}
   end
 
   def redis!(redis_host: nil, port: 6379)
     redis_host ||= ENV['REDIS_HOST'] || 'localhost'
-    @checks[:redis] = false
+    @results[:redis] = 'The Redis gem is not loaded'
     redis = Redis.new(:host => redis_host, :port => port)
     begin
       redis.ping
-      @checks[:redis] = true
+      @results[:redis] = OK
       true
-    rescue Redis::CannotConnectError
+    rescue Redis::CannotConnectError => e
+      @results[:redis] = e.to_s
       false
     end
   end
 
   def ok?
-    @checks.all? do |key, value|
-      value == true
+    @results.all? do |key, value|
+      value == OK
     end
   end
 
+  def results
+    @results
+  end
 end
