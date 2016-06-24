@@ -7,10 +7,10 @@ class ServerHealthCheck
     @results = {}
   end
 
-  def redis!(redis_host: nil, port: 6379)
-    redis_host ||= ENV['REDIS_HOST'] || 'localhost'
+  def redis!(host: nil, port: 6379)
+    host ||= ENV['REDIS_HOST'] || 'localhost'
     @results[:redis] = 'The Redis gem is not loaded'
-    redis = Redis.new(:host => redis_host, :port => port)
+    redis = Redis.new(:host => host, :port => port)
     begin
       redis.ping
       @results[:redis] = OK
