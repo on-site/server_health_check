@@ -18,9 +18,11 @@ describe ServerHealthCheck do
         example.run
         Object.send(:const_set, :Redis, redis)
       end
+
       it 'raises an execpetion' do
         expect { health_check.redis! }.to raise_error(NameError, /Redis/)
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.redis! rescue true
@@ -37,6 +39,7 @@ describe ServerHealthCheck do
       it 'returns false' do
         expect(health_check.redis!).to eq false
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.redis!
@@ -53,6 +56,7 @@ describe ServerHealthCheck do
       it 'returns true' do
         expect(health_check.redis!).to eq true
       end
+
       describe "#ok?" do
         it 'returns true' do
           health_check.redis!
