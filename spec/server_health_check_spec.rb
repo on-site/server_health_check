@@ -21,6 +21,12 @@ describe ServerHealthCheck do
       it 'raises an execpetion' do
         expect { health_check.redis! }.to raise_error(NameError, /Redis/)
       end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.redis! rescue true
+          expect(health_check.ok?).to eq false
+        end
+      end
     end
 
     context "when redis is not reachable" do
@@ -31,6 +37,12 @@ describe ServerHealthCheck do
       it 'returns false' do
         expect(health_check.redis!).to eq false
       end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.redis!
+          expect(health_check.ok?).to eq false
+        end
+      end
     end
 
     context "when redis is connected" do
@@ -40,6 +52,12 @@ describe ServerHealthCheck do
 
       it 'returns true' do
         expect(health_check.redis!).to eq true
+      end
+      describe "#ok?" do
+        it 'returns true' do
+          health_check.redis!
+          expect(health_check.ok?).to eq true
+        end
       end
 
     end
