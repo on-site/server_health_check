@@ -10,6 +10,36 @@ describe ServerHealthCheck do
     def initialize(options = nil); end
   end
 
+  describe 'typical use case' do
+    context 'when all is well' do
+      before do
+        Redis.send(:define_method, :ping) { true }
+      end
+
+      it 'reports OK' do
+        health_check = ServerHealthCheck.new
+        # health_check.active_record!
+        health_check.redis!(host: 'optional', port: 1234)
+        # health_check.aws_s3!(bucket: 'yakmail-inbound')
+        # health_check.check!(:name) do
+        #   # app-specific code that wouldn't belong in the gem
+        #   # return true or false
+        # end
+        http_status = health_check.ok? ? 200 : 500
+        expect(http_status).to eq 200
+        expect(health_check.results.keys).to contain_exactly(
+          # :active_record,
+          :redis,
+          # :aws_s3,
+        )
+        expect(health_check.results.values).to all eq('OK')
+      end
+    end
+
+    context 'when only one check fails' do
+    end
+  end
+
   let(:health_check) { ServerHealthCheck.new }
   describe "#redis!" do
     context "when redis gem is not loaded" do
