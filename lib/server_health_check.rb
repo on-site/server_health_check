@@ -21,6 +21,16 @@ class ServerHealthCheck
     end
   end
 
+  def active_record!()
+    if ActiveRecord::Base.connected?
+      results[:database] = "OK" if ActiveRecord::Base.connected?
+      true
+    else
+      results[:database] = "Failed: unable to connect to database"
+      false
+    end
+  end
+
   def ok?
     @results.all? do |key, value|
       value == OK

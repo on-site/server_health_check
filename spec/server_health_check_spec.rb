@@ -1,5 +1,10 @@
 require 'spec_helper'
 
+module ActiveRecord
+  class Base
+  end
+end
+
 describe ServerHealthCheck do
   it 'has a version number' do
     expect(ServerHealthCheck::VERSION).not_to be nil
@@ -141,4 +146,66 @@ describe ServerHealthCheck do
       end
     end
   end
+
+  describe "#active_record!" do
+    context "when Active Record gem is not loaded" do
+      around do |example|
+        active_record = Object.send(:remove_const, :ActiveRecord)
+        example.run
+        Object.send(:const_set, :ActiveRecord, active_record)
+      end
+
+      it 'raises an execpetion' do
+        expect { health_check.active_record! }.to raise_error(NameError, /ActiveRecord/)
+      end
+    end
+    context "when database is not reachable" do
+      before do
+        ActiveRecord::Base.send(:define_singleton_method, :connected?) { false }
+      end
+      it 'returns false' do
+        expect(health_check.active_record!).to eq false
+      end
+
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.active_record!
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.active_record!
+          results = health_check.results
+          expect(results).to eq database: 'Failed: unable to connect to database'
+        end
+      end
+    end
+
+    context "when database is reachable" do
+      before do
+        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+      end
+      it 'returns true' do
+        expect(health_check.active_record!).to eq true
+      end
+
+      describe "#ok?" do
+        it 'returns true' do
+          health_check.active_record!
+          expect(health_check.ok?).to eq true
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.active_record!
+          results = health_check.results
+          expect(results).to eq database: 'OK'
+        end
+      end
+    end
+  end
+  
 end
