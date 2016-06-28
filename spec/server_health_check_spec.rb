@@ -44,10 +44,7 @@ describe ServerHealthCheck do
         health_check.redis!(host: 'optional', port: 1234)
         health_check.aws_s3!(bucket: 'yakmail-inbound')
         health_check.aws_creds!
-        # health_check.check!(:name) do
-        #   # app-specific code that wouldn't belong in the gem
-        #   # return true or false
-        # end
+        health_check.check! { 1 + 2 }
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 200
         expect(health_check.results.keys).to contain_exactly(
@@ -55,7 +52,7 @@ describe ServerHealthCheck do
             :redis,
             :S3,
             :AWS,
-            #:check
+            :check
         )
         expect(health_check.results.values).to all eq('OK')
       end
@@ -75,10 +72,7 @@ describe ServerHealthCheck do
         health_check.redis!(host: 'optional', port: 1234)
         health_check.aws_s3!(bucket: 'yakmail-inbound')
         health_check.aws_creds!
-        # health_check.check!(:name) do
-        #   # app-specific code that wouldn't belong in the gem
-        #   # return true or false
-        # end
+        health_check.check! { puts "test" }
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 500
         expect(health_check.results.keys).to contain_exactly(
@@ -86,7 +80,7 @@ describe ServerHealthCheck do
            :redis,
            :S3,
            :AWS,
-           #:check
+           :check
         )
         expect(health_check.results.values).to include 'Redis::CannotConnectError'
       end
