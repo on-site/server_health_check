@@ -230,7 +230,7 @@ describe ServerHealthCheck do
         Object.send(:const_set, :Aws, aws)
       end
       it 'raises an execpetion' do
-        expect { health_check.aws_s3 }.to raise_error(NameError, /Aws/)
+        expect { health_check.aws_s3('test-bucket') }.to raise_error(NameError, /Aws/)
       end
     end
 
@@ -282,7 +282,7 @@ describe ServerHealthCheck do
     end
   end
 
-  describe "#aws_creds" do
+  describe "#aws_creds!" do
     context "when aws-sdk gem is not loaded" do
       around do |example|
         aws = Object.send(:remove_const, :Aws)
