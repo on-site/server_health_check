@@ -72,7 +72,7 @@ describe ServerHealthCheck do
         health_check.redis!(host: 'optional', port: 1234)
         health_check.aws_s3!(bucket: 'yakmail-inbound')
         health_check.aws_creds!
-        health_check.check! { puts "test" }
+        health_check.check! { nil }
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 500
         expect(health_check.results.keys).to contain_exactly(
@@ -412,18 +412,18 @@ describe ServerHealthCheck do
     end
     context "when a invalid block is passed" do
       it 'returns true' do
-        expect(health_check.check!{puts 'test'}).to eq false
+        expect(health_check.check!{nil}).to eq false
       end
       describe "#ok?" do
         it 'returns false' do
-          health_check.check!{puts 'test'}
+          health_check.check!{nil}
           expect(health_check.ok?).to eq false
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.check!{puts 'test'}
+          health_check.check!{nil}
           results = health_check.results
           expect(results).to eq check: 'Failed'
         end
