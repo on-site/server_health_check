@@ -23,13 +23,24 @@ class ServerHealthCheck
 
   def active_record!()
     if ActiveRecord::Base.connected?
-      results[:database] = "OK" if ActiveRecord::Base.connected?
+      results[:database] = "OK"
       true
     else
       results[:database] = "Failed: unable to connect to database"
       false
     end
   end
+
+def aws_s3(bucket=nil)
+   bucket = Aws::S3::Bucket.new(bucket)
+   if bucket.exists?
+     results[:S3] = "OK"
+     true
+   else
+     results[:S3] = "Failed: bucket does not exist"
+     false
+   end
+end
 
   def ok?
     @results.all? do |key, value|

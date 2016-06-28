@@ -5,14 +5,24 @@ module ActiveRecord
   end
 end
 
+class Redis
+  class CannotConnectError < StandardError; end
+  def initialize(options = nil); end
+end
+
+module Aws
+  class S3
+    class Bucket
+      def initialize(options = nil); end
+    end
+  end
+  class Client
+  end
+end
+
 describe ServerHealthCheck do
   it 'has a version number' do
     expect(ServerHealthCheck::VERSION).not_to be nil
-  end
-
-  class Redis
-    class CannotConnectError < StandardError; end
-    def initialize(options = nil); end
   end
 
   describe 'typical use case' do
@@ -154,11 +164,11 @@ describe ServerHealthCheck do
         example.run
         Object.send(:const_set, :ActiveRecord, active_record)
       end
-
       it 'raises an execpetion' do
         expect { health_check.active_record! }.to raise_error(NameError, /ActiveRecord/)
       end
     end
+
     context "when database is not reachable" do
       before do
         ActiveRecord::Base.send(:define_singleton_method, :connected?) { false }
@@ -207,5 +217,41 @@ describe ServerHealthCheck do
       end
     end
   end
-  
+
+  describe "#aws_s3" do
+    context "when aws-sdk gem is not loaded" do
+      around do |example|
+        aws = Object.send(:remove_const, :Aws)
+        example.run
+        Object.send(:const_set, :Aws, aws)
+      end
+      it 'raises an execpetion' do
+        expect { health_check.aws_s3 }.to raise_error(NameError, /Aws/)
+      end
+    end
+
+    context "when bucket does not exist" do
+      before do
+        Aws::S3::Bucket.send(:define_method, :exists?) { false }
+      end
+      it 'returns false' do
+        expect(health_check.aws_s3('test-bucket')).to eq false
+      end
+
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.aws_s3
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_s3
+          results = health_check.results
+          expect(results).to eq S3: 'Failed: bucket does not exist'
+        end
+      end
+    end
+  end
 end
