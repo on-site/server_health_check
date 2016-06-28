@@ -31,28 +31,41 @@ class ServerHealthCheck
     end
   end
 
-def aws_s3(bucket=nil)
-   bucket = Aws::S3::Bucket.new(bucket)
-   if bucket.exists?
-     @results[:S3] = "OK"
-     true
-   else
-     @results[:S3] = "Failed: bucket does not exist"
-     false
-   end
-end
-
-def aws_creds!
-  aws = Aws::S3::Client.new
-  begin
-    aws.list_buckets
-    @results[:AWS] = "OK"
-    true
-  rescue Aws::S3::Errors::InvalidAccessKeyId, Aws::S3::Errors::SignatureDoesNotMatch, NoMethodError => e
-    @results[:AWS] = e.to_s
-    false
+  def aws_s3!(bucket=nil)
+     bucket = Aws::S3::Bucket.new(bucket)
+     if bucket.exists?
+       @results[:S3] = "OK"
+       true
+     else
+       @results[:S3] = "Failed: bucket does not exist"
+       false
+     end
   end
-end
+
+  def aws_creds!
+    aws = Aws::S3::Client.new
+    begin
+      aws.list_buckets
+      @results[:AWS] = "OK"
+      true
+    rescue Aws::S3::Errors::InvalidAccessKeyId, Aws::S3::Errors::SignatureDoesNotMatch, NoMethodError => e
+      @results[:AWS] = e.to_s
+      false
+    end
+  end
+
+  def check!
+    success = yield
+    if success
+      @results[:check] = "OK"
+      true
+    else
+      @results[:check] = "Failed"
+      false
+    end
+    rescue => e
+      @results[:check] = e.to_s    
+  end
 
   def ok?
     @results.all? do |key, value|

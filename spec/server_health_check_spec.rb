@@ -33,13 +33,17 @@ describe ServerHealthCheck do
     context 'when all is well' do
       before do
         Redis.send(:define_method, :ping) { true }
+        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+        Aws::S3::Bucket.send(:define_method, :exists?) { true }
+        Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
 
       it 'reports OK' do
         health_check = ServerHealthCheck.new
-        # health_check.active_record!
+        health_check.active_record!
         health_check.redis!(host: 'optional', port: 1234)
-        # health_check.aws_s3!(bucket: 'yakmail-inbound')
+        health_check.aws_s3!(bucket: 'yakmail-inbound')
+        health_check.aws_creds!
         # health_check.check!(:name) do
         #   # app-specific code that wouldn't belong in the gem
         #   # return true or false
@@ -47,9 +51,11 @@ describe ServerHealthCheck do
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 200
         expect(health_check.results.keys).to contain_exactly(
-          # :active_record,
-          :redis,
-          # :aws_s3,
+            :database,
+            :redis,
+            :S3,
+            :AWS,
+            #:check
         )
         expect(health_check.results.values).to all eq('OK')
       end
@@ -58,13 +64,17 @@ describe ServerHealthCheck do
     context 'when only one check fails' do
       before do
         Redis.send(:define_method, :ping) { fail Redis::CannotConnectError }
+        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+        Aws::S3::Bucket.send(:define_method, :exists?) { true }
+        Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
 
       it 'reports failure' do
         health_check = ServerHealthCheck.new
-        # health_check.active_record!
+        health_check.active_record!
         health_check.redis!(host: 'optional', port: 1234)
-        # health_check.aws_s3!(bucket: 'yakmail-inbound')
+        health_check.aws_s3!(bucket: 'yakmail-inbound')
+        health_check.aws_creds!
         # health_check.check!(:name) do
         #   # app-specific code that wouldn't belong in the gem
         #   # return true or false
@@ -72,9 +82,11 @@ describe ServerHealthCheck do
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 500
         expect(health_check.results.keys).to contain_exactly(
-          # :active_record,
-          :redis,
-          # :aws_s3,
+           :database,
+           :redis,
+           :S3,
+           :AWS,
+           #:check
         )
         expect(health_check.results.values).to include 'Redis::CannotConnectError'
       end
@@ -222,7 +234,7 @@ describe ServerHealthCheck do
     end
   end
 
-  describe "#aws_s3" do
+  describe "#aws_s3!" do
     context "when aws-sdk gem is not loaded" do
       around do |example|
         aws = Object.send(:remove_const, :Aws)
@@ -230,7 +242,7 @@ describe ServerHealthCheck do
         Object.send(:const_set, :Aws, aws)
       end
       it 'raises an execpetion' do
-        expect { health_check.aws_s3('test-bucket') }.to raise_error(NameError, /Aws/)
+        expect { health_check.aws_s3!('test-bucket') }.to raise_error(NameError, /Aws/)
       end
     end
 
@@ -239,19 +251,19 @@ describe ServerHealthCheck do
         Aws::S3::Bucket.send(:define_method, :exists?) { false }
       end
       it 'returns false' do
-        expect(health_check.aws_s3('test-bucket')).to eq false
+        expect(health_check.aws_s3!('test-bucket')).to eq false
       end
 
       describe "#ok?" do
         it 'returns false' do
-          health_check.aws_s3('test-bucket')
+          health_check.aws_s3!('test-bucket')
           expect(health_check.ok?).to eq false
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.aws_s3('test-bucket')
+          health_check.aws_s3!('test-bucket')
           results = health_check.results
           expect(results).to eq S3: 'Failed: bucket does not exist'
         end
@@ -262,19 +274,19 @@ describe ServerHealthCheck do
         Aws::S3::Bucket.send(:define_method, :exists?) { true }
       end
       it 'returns true' do
-        expect(health_check.aws_s3('test-bucket')).to eq true
+        expect(health_check.aws_s3!('test-bucket')).to eq true
       end
 
       describe "#ok?" do
         it 'returns true' do
-          health_check.aws_s3('test-bucket')
+          health_check.aws_s3!('test-bucket')
           expect(health_check.ok?).to eq true
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.aws_s3('test-bucket')
+          health_check.aws_s3!('test-bucket')
           results = health_check.results
           expect(results).to eq S3: 'OK'
         end
@@ -357,6 +369,69 @@ describe ServerHealthCheck do
           health_check.aws_creds!
           results = health_check.results
           expect(results).to eq AWS: 'NoMethodError'
+        end
+      end
+    end
+    context "when login is valid" do
+      before do
+        Aws::S3::Client.send(:define_method, :list_buckets) { true}
+      end
+      it 'returns true' do
+        expect(health_check.aws_creds!).to eq true
+      end
+
+      describe "#ok?" do
+        it 'returns true' do
+          health_check.aws_creds!
+          expect(health_check.ok?).to eq true
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_creds!
+          results = health_check.results
+          expect(results).to eq AWS: 'OK'
+        end
+      end
+    end
+  end
+  describe "#check!" do
+    context "when a valid block is passed" do
+      it 'returns true' do
+        expect(health_check.check!{1+2}).to eq true
+      end
+      describe "#ok?" do
+        it 'returns true' do
+          health_check.check!{1+2}
+          expect(health_check.ok?).to eq true
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.check!{1+2}
+          results = health_check.results
+          expect(results).to eq check: 'OK'
+        end
+      end
+    end
+    context "when a invalid block is passed" do
+      it 'returns true' do
+        expect(health_check.check!{puts 'test'}).to eq false
+      end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.check!{puts 'test'}
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.check!{puts 'test'}
+          results = health_check.results
+          expect(results).to eq check: 'Failed'
         end
       end
     end
