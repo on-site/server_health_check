@@ -15,8 +15,12 @@ module Aws
     class Bucket
       def initialize(options = nil); end
     end
-  end
-  class Client
+    class Client
+    end
+    class Errors
+      class SignatureDoesNotMatch < StandardError; end
+      class InvalidAccessKeyId < StandardError; end
+    end
   end
 end
 
@@ -240,16 +244,119 @@ describe ServerHealthCheck do
 
       describe "#ok?" do
         it 'returns false' do
-          health_check.aws_s3
+          health_check.aws_s3('test-bucket')
           expect(health_check.ok?).to eq false
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.aws_s3
+          health_check.aws_s3('test-bucket')
           results = health_check.results
           expect(results).to eq S3: 'Failed: bucket does not exist'
+        end
+      end
+    end
+    context "when bucket exist" do
+      before do
+        Aws::S3::Bucket.send(:define_method, :exists?) { true }
+      end
+      it 'returns true' do
+        expect(health_check.aws_s3('test-bucket')).to eq true
+      end
+
+      describe "#ok?" do
+        it 'returns true' do
+          health_check.aws_s3('test-bucket')
+          expect(health_check.ok?).to eq true
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_s3('test-bucket')
+          results = health_check.results
+          expect(results).to eq S3: 'OK'
+        end
+      end
+    end
+  end
+
+  describe "#aws_creds" do
+    context "when aws-sdk gem is not loaded" do
+      around do |example|
+        aws = Object.send(:remove_const, :Aws)
+        example.run
+        Object.send(:const_set, :Aws, aws)
+      end
+      it 'raises an execpetion' do
+        expect { health_check.aws_creds! }.to raise_error(NameError, /Aws/)
+      end
+    end
+    context "when access key is invalid" do
+      before do
+        Aws::S3::Client.send(:define_method, :list_buckets) { fail Aws::S3::Errors::InvalidAccessKeyId }
+      end
+      it 'returns false' do
+        expect(health_check.aws_creds!).to eq false
+      end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.aws_creds!
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_creds!
+          results = health_check.results
+          expect(results).to eq AWS: 'Aws::S3::Errors::InvalidAccessKeyId'
+        end
+      end
+    end
+
+    context "when secret access key is invalid" do
+      before do
+        Aws::S3::Client.send(:define_method, :list_buckets) { fail Aws::S3::Errors::SignatureDoesNotMatch }
+      end
+      it 'returns false' do
+        expect(health_check.aws_creds!).to eq false
+      end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.aws_creds!
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_creds!
+          results = health_check.results
+          expect(results).to eq AWS: 'Aws::S3::Errors::SignatureDoesNotMatch'
+        end
+      end
+    end
+    context "when no keys are set" do
+      before do
+        Aws::S3::Client.send(:define_method, :list_buckets) { fail NoMethodError }
+      end
+      it 'returns false' do
+        expect(health_check.aws_creds!).to eq false
+      end
+      describe "#ok?" do
+        it 'returns false' do
+          health_check.aws_creds!
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it 'returns a hash with string results' do
+          health_check.aws_creds!
+          results = health_check.results
+          expect(results).to eq AWS: 'NoMethodError'
         end
       end
     end

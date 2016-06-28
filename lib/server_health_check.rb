@@ -23,10 +23,10 @@ class ServerHealthCheck
 
   def active_record!()
     if ActiveRecord::Base.connected?
-      results[:database] = "OK"
+      @results[:database] = "OK"
       true
     else
-      results[:database] = "Failed: unable to connect to database"
+      @results[:database] = "Failed: unable to connect to database"
       false
     end
   end
@@ -34,12 +34,24 @@ class ServerHealthCheck
 def aws_s3(bucket=nil)
    bucket = Aws::S3::Bucket.new(bucket)
    if bucket.exists?
-     results[:S3] = "OK"
+     @results[:S3] = "OK"
      true
    else
-     results[:S3] = "Failed: bucket does not exist"
+     @results[:S3] = "Failed: bucket does not exist"
      false
    end
+end
+
+def aws_creds!
+  aws = Aws::S3::Client.new
+  begin
+    aws.list_buckets
+    @results[:AWS] = "OK"
+    true
+  rescue Aws::S3::Errors::InvalidAccessKeyId, Aws::S3::Errors::SignatureDoesNotMatch, NoMethodError => e
+    @results[:AWS] = e.to_s
+    false
+  end
 end
 
   def ok?
