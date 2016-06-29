@@ -27,7 +27,7 @@ class SomeController
     health_check.active_record!
     health_check.redis!(host: 'optional', port: 1234)
     health_check.aws_creds!
-    health_check.aws_s3!(bucket: 'yakmail-inbound')
+    health_check.aws_s3!('yakmail-inbound')
     health_check.check! do
       # app-specific code that wouldn't belong in the gem
       # return true or false
