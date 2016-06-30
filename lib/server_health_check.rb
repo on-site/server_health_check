@@ -21,12 +21,12 @@ class ServerHealthCheck
     end
   end
 
-  def active_record!()
+  def active_record!
     if ActiveRecord::Base.connected?
-      @results[:database] = "OK"
+      @results[:active_record] = OK
       true
     else
-      @results[:database] = "Failed: unable to connect to database"
+      @results[:active_record] = "Failed: unable to connect to database"
       false
     end
   end
@@ -34,10 +34,10 @@ class ServerHealthCheck
   def aws_s3!(bucket=nil)
      bucket = Aws::S3::Bucket.new(bucket)
      if bucket.exists?
-       @results[:S3] = "OK"
+       @results[:S3] = OK
        true
      else
-       @results[:S3] = "Failed: bucket does not exist"
+       @results[:S3] = "Failed: bucket does not exists"
        false
      end
   end
@@ -46,7 +46,7 @@ class ServerHealthCheck
     aws = Aws::S3::Client.new
     begin
       aws.list_buckets
-      @results[:AWS] = "OK"
+      @results[:AWS] = OK
       true
     rescue Aws::S3::Errors::InvalidAccessKeyId, Aws::S3::Errors::SignatureDoesNotMatch, NoMethodError => e
       @results[:AWS] = e.to_s
@@ -57,14 +57,14 @@ class ServerHealthCheck
   def check!
     success = yield
     if success
-      @results[:check] = "OK"
+      @results[:check] = OK
       true
     else
       @results[:check] = "Failed"
       false
     end
     rescue => e
-      @results[:check] = e.to_s    
+      @results[:check] = e.to_s
   end
 
   def ok?

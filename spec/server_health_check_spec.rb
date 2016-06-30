@@ -48,7 +48,7 @@ describe ServerHealthCheck do
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 200
         expect(health_check.results.keys).to contain_exactly(
-            :database,
+            :active_record,
             :redis,
             :S3,
             :AWS,
@@ -72,11 +72,11 @@ describe ServerHealthCheck do
         health_check.redis!(host: 'optional', port: 1234)
         health_check.aws_s3!(bucket: 'yakmail-inbound')
         health_check.aws_creds!
-        health_check.check! { nil }
+        health_check.check! { true }
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 500
         expect(health_check.results.keys).to contain_exactly(
-           :database,
+           :active_record,
            :redis,
            :S3,
            :AWS,
@@ -198,7 +198,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.active_record!
           results = health_check.results
-          expect(results).to eq database: 'Failed: unable to connect to database'
+          expect(results).to eq active_record: 'Failed: unable to connect to database'
         end
       end
     end
@@ -222,7 +222,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.active_record!
           results = health_check.results
-          expect(results).to eq database: 'OK'
+          expect(results).to eq active_record: 'OK'
         end
       end
     end
@@ -259,7 +259,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.aws_s3!('test-bucket')
           results = health_check.results
-          expect(results).to eq S3: 'Failed: bucket does not exist'
+          expect(results).to eq S3: 'Failed: bucket does not exists'
         end
       end
     end
@@ -391,7 +391,7 @@ describe ServerHealthCheck do
     end
   end
   describe "#check!" do
-    context "when a valid block is passed" do
+    context "when the given block returns a truthy value" do
       it 'returns true' do
         expect(health_check.check!{1+2}).to eq true
       end
@@ -410,7 +410,7 @@ describe ServerHealthCheck do
         end
       end
     end
-    context "when a invalid block is passed" do
+    context "when the given block returns a falsy value" do
       it 'returns true' do
         expect(health_check.check!{nil}).to eq false
       end
@@ -423,7 +423,7 @@ describe ServerHealthCheck do
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.check!{nil}
+          health_check.check!{puts 'test'}
           results = health_check.results
           expect(results).to eq check: 'Failed'
         end
