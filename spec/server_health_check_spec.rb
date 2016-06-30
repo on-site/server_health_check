@@ -48,11 +48,11 @@ describe ServerHealthCheck do
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 200
         expect(health_check.results.keys).to contain_exactly(
-            :active_record,
-            :redis,
-            :S3,
-            :AWS,
-            :check
+          :active_record,
+          :redis,
+          :S3,
+          :AWS,
+          :check
         )
         expect(health_check.results.values).to all eq('OK')
       end
@@ -60,7 +60,7 @@ describe ServerHealthCheck do
 
     context 'when only one check fails' do
       before do
-        Redis.send(:define_method, :ping) { fail Redis::CannotConnectError }
+        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
         ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
         Aws::S3::Bucket.send(:define_method, :exists?) { true }
         Aws::S3::Client.send(:define_method, :list_buckets) { true }
@@ -76,11 +76,11 @@ describe ServerHealthCheck do
         http_status = health_check.ok? ? 200 : 500
         expect(http_status).to eq 500
         expect(health_check.results.keys).to contain_exactly(
-           :active_record,
-           :redis,
-           :S3,
-           :AWS,
-           :check
+          :active_record,
+          :redis,
+          :S3,
+          :AWS,
+          :check
         )
         expect(health_check.results.values).to include 'Redis::CannotConnectError'
       end
@@ -118,7 +118,7 @@ describe ServerHealthCheck do
 
     context "when redis is not reachable" do
       before do
-        Redis.send(:define_method, :ping) { fail Redis::CannotConnectError }
+        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
       end
 
       it 'returns false' do
@@ -301,7 +301,7 @@ describe ServerHealthCheck do
     end
     context "when access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { fail Aws::S3::Errors::InvalidAccessKeyId }
+        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::InvalidAccessKeyId }
       end
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
@@ -324,7 +324,7 @@ describe ServerHealthCheck do
 
     context "when secret access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { fail Aws::S3::Errors::SignatureDoesNotMatch }
+        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::SignatureDoesNotMatch }
       end
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
@@ -346,7 +346,7 @@ describe ServerHealthCheck do
     end
     context "when no keys are set" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { fail NoMethodError }
+        Aws::S3::Client.send(:define_method, :list_buckets) { raise NoMethodError }
       end
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
@@ -368,7 +368,7 @@ describe ServerHealthCheck do
     end
     context "when login is valid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { true}
+        Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
       it 'returns true' do
         expect(health_check.aws_creds!).to eq true
@@ -393,18 +393,18 @@ describe ServerHealthCheck do
   describe "#check!" do
     context "when the given block returns a truthy value" do
       it 'returns true' do
-        expect(health_check.check!{1+2}).to eq true
+        expect(health_check.check! { 1 + 2 }).to eq true
       end
       describe "#ok?" do
         it 'returns true' do
-          health_check.check!{1+2}
+          health_check.check! { 1 + 2 }
           expect(health_check.ok?).to eq true
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.check!{1+2}
+          health_check.check! { 1 + 2 }
           results = health_check.results
           expect(results).to eq check: 'OK'
         end
@@ -412,18 +412,18 @@ describe ServerHealthCheck do
     end
     context "when the given block returns a falsy value" do
       it 'returns true' do
-        expect(health_check.check!{nil}).to eq false
+        expect(health_check.check! { nil }).to eq false
       end
       describe "#ok?" do
         it 'returns false' do
-          health_check.check!{nil}
+          health_check.check! { nil }
           expect(health_check.ok?).to eq false
         end
       end
 
       describe "#results" do
         it 'returns a hash with string results' do
-          health_check.check!{puts 'test'}
+          health_check.check! { nil }
           results = health_check.results
           expect(results).to eq check: 'Failed'
         end

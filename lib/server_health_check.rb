@@ -1,7 +1,7 @@
 require "server_health_check/version"
 
 class ServerHealthCheck
-  OK = 'OK'
+  OK = 'OK'.freeze
 
   def initialize
     @results = {}
@@ -10,7 +10,7 @@ class ServerHealthCheck
   def redis!(host: nil, port: 6379)
     host ||= ENV['REDIS_HOST'] || 'localhost'
     @results[:redis] = 'The Redis gem is not loaded'
-    redis = Redis.new(:host => host, :port => port)
+    redis = Redis.new(host: host, port: port)
     begin
       redis.ping
       @results[:redis] = OK
@@ -31,15 +31,15 @@ class ServerHealthCheck
     end
   end
 
-  def aws_s3!(bucket=nil)
-     bucket = Aws::S3::Bucket.new(bucket)
-     if bucket.exists?
-       @results[:S3] = OK
-       true
-     else
-       @results[:S3] = "Failed: bucket does not exists"
-       false
-     end
+  def aws_s3!(bucket = nil)
+    bucket = Aws::S3::Bucket.new(bucket)
+    if bucket.exists?
+      @results[:S3] = OK
+      true
+    else
+      @results[:S3] = "Failed: bucket does not exists"
+      false
+    end
   end
 
   def aws_creds!
@@ -73,7 +73,5 @@ class ServerHealthCheck
     end
   end
 
-  def results
-    @results
-  end
+  attr_reader :results
 end
