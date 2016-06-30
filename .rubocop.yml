@@ -1,0 +1,55 @@
+AllCops:
+  TargetRubyVersion: 2.2
+  Include:
+    - '**/Rakefile'
+
+StringLiterals:
+  Enabled: false
+
+LineLength:
+  Enabled: false
+
+ClassLength:
+  Enabled: false
+
+MethodLength:
+  Enabled: false
+
+AbcSize:
+  Enabled: false
+
+UnusedBlockArgument:
+  Enabled: false
+
+UnusedMethodArgument:
+  Enabled: false
+
+GuardClause:
+  Enabled: false
+
+SpaceInsideHashLiteralBraces:
+  Enabled: false
+
+Documentation:
+  Enabled: false
+
+Lambda:
+  Enabled: false
+
+BlockDelimiters:
+  Enabled: false
+
+ConditionalAssignment:
+  Enabled: false
+
+RedundantBlockCall:
+  Enabled: false
+
+CyclomaticComplexity:
+  Enabled: false
+
+PerceivedComplexity:
+  Enabled: false
+
+RescueModifier:
+  Enabled: false
