@@ -6,17 +6,17 @@ require 'server_health_check/version'
 Gem::Specification.new do |spec|
   spec.name          = "server_health_check"
   spec.version       = ServerHealthCheck::VERSION
-  spec.authors       = ["qgriffith"]
+  spec.authors       = ["Quenten Griffith"]
   spec.email         = ["qgriffith@on-site.com"]
 
   spec.summary       = %q{Healthcheck for web apps.}
-  spec.description   = %q{Health check for web apps checking things like active record, redis,and AWS.}
-  spec.homepage      = "http://github.on-site.com"
+  spec.description   = %q{Health check for web apps checking things like active record, redis, and AWS.}
+  spec.homepage      = ""
 
   # Prevent pushing this gem to RubyGems.org. To allow pushes either set the 'allowed_push_host'
   # to allow pushing to a single host or delete this section to allow pushing to any host.
   if spec.respond_to?(:metadata)
-    spec.metadata['allowed_push_host'] = "TODO: Set to 'http://mygemserver.com'"
+    spec.metadata['allowed_push_host'] = "https://rubygems.org"
   else
     raise "RubyGems 2.0 or newer is required to protect against public gem pushes."
   end
