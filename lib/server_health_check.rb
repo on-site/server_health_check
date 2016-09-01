@@ -54,7 +54,7 @@ class ServerHealthCheck
     end
   end
 
-  def check!(name = 'check')
+  def check!(name = 'custom_check')
     success = yield
     if success
       @results[name.to_sym] = OK

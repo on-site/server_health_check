@@ -54,7 +54,7 @@ describe ServerHealthCheck do
           :redis,
           :S3,
           :AWS,
-          :check
+          :custom_check
         )
         expect(health_check.results.values).to all eq('OK')
       end
@@ -82,7 +82,7 @@ describe ServerHealthCheck do
           :redis,
           :S3,
           :AWS,
-          :check
+          :custom_check
         )
         expect(health_check.results.values).to include 'Redis::CannotConnectError'
       end
@@ -417,12 +417,12 @@ describe ServerHealthCheck do
       it 'can be provided' do
         health_check.check!('can_reach_the_internet') { true }
         expect(health_check.results.keys).to include(:can_reach_the_internet)
-        expect(health_check.results.keys).not_to include(:check)
+        expect(health_check.results.keys).not_to include(:custom_check)
       end
 
       it 'has a default' do
         health_check.check! { true }
-        expect(health_check.results.keys).to include(:check)
+        expect(health_check.results.keys).to include(:custom_check)
       end
     end
 
@@ -442,7 +442,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.check! { 1 + 2 }
           results = health_check.results
-          expect(results).to eq check: 'OK'
+          expect(results).to eq custom_check: 'OK'
         end
       end
     end
@@ -463,7 +463,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.check! { nil }
           results = health_check.results
-          expect(results).to eq check: 'Failed'
+          expect(results).to eq custom_check: 'Failed'
         end
       end
     end
