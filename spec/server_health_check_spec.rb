@@ -413,6 +413,19 @@ describe ServerHealthCheck do
   end
 
   describe "#check!" do
+    describe 'name' do
+      it 'can be provided' do
+        health_check.check!('can_reach_the_internet') { true }
+        expect(health_check.results.keys).to include(:can_reach_the_internet)
+        expect(health_check.results.keys).not_to include(:check)
+      end
+
+      it 'has a default' do
+        health_check.check! { true }
+        expect(health_check.results.keys).to include(:check)
+      end
+    end
+
     context "when the given block returns a truthy value" do
       it 'returns true' do
         expect(health_check.check! { 1 + 2 }).to eq true

@@ -54,17 +54,17 @@ class ServerHealthCheck
     end
   end
 
-  def check!
+  def check!(name = 'check')
     success = yield
     if success
-      @results[:check] = OK
+      @results[name.to_sym] = OK
       true
     else
-      @results[:check] = "Failed"
+      @results[name.to_sym] = "Failed"
       false
     end
     rescue => e
-      @results[:check] = e.to_s
+      @results[name.to_sym] = e.to_s
   end
 
   def ok?
