@@ -1,3 +1,3 @@
 class ServerHealthCheck
-  VERSION = "0.1.1".freeze
+  VERSION = "1.0".freeze
 end
