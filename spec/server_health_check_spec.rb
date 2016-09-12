@@ -15,8 +15,10 @@ module Aws
     class Bucket
       def initialize(options = nil); end
     end
+
     class Client
     end
+
     class Errors
       class SignatureDoesNotMatch < StandardError; end
       class InvalidAccessKeyId < StandardError; end
@@ -52,7 +54,7 @@ describe ServerHealthCheck do
           :redis,
           :S3,
           :AWS,
-          :check
+          :custom_check
         )
         expect(health_check.results.values).to all eq('OK')
       end
@@ -80,7 +82,7 @@ describe ServerHealthCheck do
           :redis,
           :S3,
           :AWS,
-          :check
+          :custom_check
         )
         expect(health_check.results.values).to include 'Redis::CannotConnectError'
       end
@@ -88,6 +90,7 @@ describe ServerHealthCheck do
   end
 
   let(:health_check) { ServerHealthCheck.new }
+
   describe "#redis!" do
     context "when redis gem is not loaded" do
       around do |example|
@@ -174,6 +177,7 @@ describe ServerHealthCheck do
         example.run
         Object.send(:const_set, :ActiveRecord, active_record)
       end
+
       it 'raises an execpetion' do
         expect { health_check.active_record! }.to raise_error(NameError, /ActiveRecord/)
       end
@@ -183,6 +187,7 @@ describe ServerHealthCheck do
       before do
         ActiveRecord::Base.send(:define_singleton_method, :connected?) { false }
       end
+
       it 'returns false' do
         expect(health_check.active_record!).to eq false
       end
@@ -207,6 +212,7 @@ describe ServerHealthCheck do
       before do
         ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
       end
+
       it 'returns true' do
         expect(health_check.active_record!).to eq true
       end
@@ -235,6 +241,7 @@ describe ServerHealthCheck do
         example.run
         Object.send(:const_set, :Aws, aws)
       end
+
       it 'raises an execpetion' do
         expect { health_check.aws_s3!('test-bucket') }.to raise_error(NameError, /Aws/)
       end
@@ -244,6 +251,7 @@ describe ServerHealthCheck do
       before do
         Aws::S3::Bucket.send(:define_method, :exists?) { false }
       end
+
       it 'returns false' do
         expect(health_check.aws_s3!('test-bucket')).to eq false
       end
@@ -263,10 +271,12 @@ describe ServerHealthCheck do
         end
       end
     end
+
     context "when bucket exist" do
       before do
         Aws::S3::Bucket.send(:define_method, :exists?) { true }
       end
+
       it 'returns true' do
         expect(health_check.aws_s3!('test-bucket')).to eq true
       end
@@ -295,17 +305,21 @@ describe ServerHealthCheck do
         example.run
         Object.send(:const_set, :Aws, aws)
       end
+
       it 'raises an execpetion' do
         expect { health_check.aws_creds! }.to raise_error(NameError, /Aws/)
       end
     end
+
     context "when access key is invalid" do
       before do
         Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::InvalidAccessKeyId }
       end
+
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.aws_creds!
@@ -326,9 +340,11 @@ describe ServerHealthCheck do
       before do
         Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::SignatureDoesNotMatch }
       end
+
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.aws_creds!
@@ -344,13 +360,16 @@ describe ServerHealthCheck do
         end
       end
     end
+
     context "when no keys are set" do
       before do
         Aws::S3::Client.send(:define_method, :list_buckets) { raise NoMethodError }
       end
+
       it 'returns false' do
         expect(health_check.aws_creds!).to eq false
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.aws_creds!
@@ -366,10 +385,12 @@ describe ServerHealthCheck do
         end
       end
     end
+
     context "when login is valid" do
       before do
         Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
+
       it 'returns true' do
         expect(health_check.aws_creds!).to eq true
       end
@@ -390,11 +411,26 @@ describe ServerHealthCheck do
       end
     end
   end
+
   describe "#check!" do
+    describe 'name' do
+      it 'can be provided' do
+        health_check.check!('can_reach_the_internet') { true }
+        expect(health_check.results.keys).to include(:can_reach_the_internet)
+        expect(health_check.results.keys).not_to include(:custom_check)
+      end
+
+      it 'has a default' do
+        health_check.check! { true }
+        expect(health_check.results.keys).to include(:custom_check)
+      end
+    end
+
     context "when the given block returns a truthy value" do
       it 'returns true' do
         expect(health_check.check! { 1 + 2 }).to eq true
       end
+
       describe "#ok?" do
         it 'returns true' do
           health_check.check! { 1 + 2 }
@@ -406,14 +442,16 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.check! { 1 + 2 }
           results = health_check.results
-          expect(results).to eq check: 'OK'
+          expect(results).to eq custom_check: 'OK'
         end
       end
     end
+
     context "when the given block returns a falsy value" do
       it 'returns true' do
         expect(health_check.check! { nil }).to eq false
       end
+
       describe "#ok?" do
         it 'returns false' do
           health_check.check! { nil }
@@ -425,7 +463,7 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.check! { nil }
           results = health_check.results
-          expect(results).to eq check: 'Failed'
+          expect(results).to eq custom_check: 'Failed'
         end
       end
     end
