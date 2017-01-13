@@ -63,8 +63,8 @@ class ServerHealthCheck
       @results[name.to_sym] = "Failed"
       false
     end
-    rescue => e
-      @results[name.to_sym] = e.to_s
+  rescue => e
+    @results[name.to_sym] = e.to_s
   end
 
   def ok?
