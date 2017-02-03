@@ -6,8 +6,8 @@ require 'server_health_check/version'
 Gem::Specification.new do |spec|
   spec.name          = "server_health_check"
   spec.version       = ServerHealthCheck::VERSION
-  spec.authors       = ["Quenten Griffith"]
-  spec.email         = ["qgriffith@on-site.com"]
+  spec.authors       = ["Quenten Griffith", "Isaac Betesh"]
+  spec.email         = ["qgriffith@on-site.com", "iybetesh@gmail.com"]
 
   spec.summary       = %q{Healthcheck for web apps.}
   spec.description   = %q{Health check for web apps checking things like active record, redis, and AWS.}
