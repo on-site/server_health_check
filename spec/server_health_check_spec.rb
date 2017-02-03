@@ -13,10 +13,11 @@ end
 module Aws
   class S3
     class Bucket
-      def initialize(options = nil); end
+      def initialize(bucket_name, options = nil); end
     end
 
     class Client
+      def initialize(options = nil); end
     end
 
     class Errors
