@@ -2,8 +2,10 @@ require "server_health_check/version"
 
 class ServerHealthCheck
   OK = 'OK'.freeze
+  attr_reader :logger
 
-  def initialize
+  def initialize(options = {})
+    @logger = options[:logger]
     @results = {}
   end
 
@@ -32,7 +34,9 @@ class ServerHealthCheck
   end
 
   def aws_s3!(bucket = nil)
-    bucket = Aws::S3::Bucket.new(bucket)
+    options = {}
+    options[:logger] = logger if logger
+    bucket = Aws::S3::Bucket.new(bucket, options)
     if bucket.exists?
       @results[:S3] = OK
       true
@@ -43,7 +47,9 @@ class ServerHealthCheck
   end
 
   def aws_creds!
-    aws = Aws::S3::Client.new
+    options = {}
+    options[:logger] = logger if logger
+    aws = Aws::S3::Client.new(options)
     begin
       aws.list_buckets
       @results[:AWS] = OK
@@ -63,8 +69,8 @@ class ServerHealthCheck
       @results[name.to_sym] = "Failed"
       false
     end
-    rescue => e
-      @results[name.to_sym] = e.to_s
+  rescue => e
+    @results[name.to_sym] = e.to_s
   end
 
   def ok?
