@@ -24,10 +24,13 @@ class ServerHealthCheck
   end
 
   def active_record!
-    if ActiveRecord::Base.connected?
+    begin
+      ActiveRecord::Base.connection
       @results[:active_record] = OK
       true
-    else
+    rescue NameError
+      raise
+    rescue StandardError => e
       @results[:active_record] = "Failed: unable to connect to database"
       false
     end

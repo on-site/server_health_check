@@ -36,7 +36,7 @@ describe ServerHealthCheck do
     context 'when all is well' do
       before do
         Redis.send(:define_method, :ping) { true }
-        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+        ActiveRecord::Base.send(:define_singleton_method, :connection) { true }
         Aws::S3::Bucket.send(:define_method, :exists?) { true }
         Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
@@ -64,7 +64,7 @@ describe ServerHealthCheck do
     context 'when only one check fails' do
       before do
         Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
-        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+        allow(ActiveRecord::Base).to receive(:connection).and_raise(StandardError.new("DB error"))
         Aws::S3::Bucket.send(:define_method, :exists?) { true }
         Aws::S3::Client.send(:define_method, :list_buckets) { true }
       end
@@ -186,7 +186,7 @@ describe ServerHealthCheck do
 
     context "when database is not reachable" do
       before do
-        ActiveRecord::Base.send(:define_singleton_method, :connected?) { false }
+        allow(ActiveRecord::Base).to receive(:connection).and_raise(StandardError.new("DB: error"))
       end
 
       it 'returns false' do
@@ -211,7 +211,7 @@ describe ServerHealthCheck do
 
     context "when database is reachable" do
       before do
-        ActiveRecord::Base.send(:define_singleton_method, :connected?) { true }
+        ActiveRecord::Base.send(:define_singleton_method, :connection) { true }
       end
 
       it 'returns true' do
