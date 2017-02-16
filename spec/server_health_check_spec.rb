@@ -54,10 +54,10 @@ describe ServerHealthCheck do
   describe 'typical use case' do
     context 'when all is well' do
       before do
-        Redis.send(:define_method, :ping) { true }
+        allow_any_instance_of(Redis).to receive(:ping).and_return(true)
         allow(ActiveRecord::Base.connection).to receive(:active?).and_return(true)
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'reports OK' do
@@ -82,11 +82,11 @@ describe ServerHealthCheck do
 
     context 'when only one check fails' do
       before do
-        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
+        allow_any_instance_of(Redis).to receive(:ping).and_raise(Redis::CannotConnectError)
         connection_double = double
         allow(ActiveRecord::Base.connection).to receive(:active?).and_raise(StandardError.new("DB error"))
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'reports failure' do
@@ -140,7 +140,7 @@ describe ServerHealthCheck do
 
     context "when redis is not reachable" do
       before do
-        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
+        allow_any_instance_of(Redis).to receive(:ping).and_raise(Redis::CannotConnectError)
       end
 
       it 'returns false' do
@@ -165,7 +165,7 @@ describe ServerHealthCheck do
 
     context "when redis is connected" do
       before do
-        Redis.send(:define_method, :ping) { true }
+        allow_any_instance_of(Redis).to receive(:ping).and_return(true)
       end
 
       it 'returns true' do
@@ -289,7 +289,7 @@ describe ServerHealthCheck do
 
     context "when bucket does not exist" do
       before do
-        Aws::S3::Bucket.send(:define_method, :exists?) { false }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(false)
       end
 
       it 'returns false' do
@@ -314,7 +314,7 @@ describe ServerHealthCheck do
 
     context "when bucket exist" do
       before do
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
       end
 
       it 'returns true' do
@@ -351,7 +351,7 @@ describe ServerHealthCheck do
 
     context "when access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::InvalidAccessKeyId }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(Aws::S3::Errors::InvalidAccessKeyId)
       end
 
       it 'returns false' do
@@ -376,7 +376,7 @@ describe ServerHealthCheck do
 
     context "when secret access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::SignatureDoesNotMatch }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(Aws::S3::Errors::SignatureDoesNotMatch)
       end
 
       it 'returns false' do
@@ -401,7 +401,7 @@ describe ServerHealthCheck do
 
     context "when no keys are set" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise NoMethodError }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(NoMethodError)
       end
 
       it 'returns false' do
@@ -426,7 +426,7 @@ describe ServerHealthCheck do
 
     context "when login is valid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'returns true' do
