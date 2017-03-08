@@ -1,7 +1,26 @@
 require 'spec_helper'
 
 module ActiveRecord
+  class ConnectionPool
+    def with_connection
+      yield ActiveRecord::Base.connection
+    end
+  end
+
+  class Connection
+    def active?
+      raise "This method should be stubbed"
+    end
+  end
+
   class Base
+    def self.connection_pool
+      @connection_pool ||= ActiveRecord::ConnectionPool.new
+    end
+
+    def self.connection
+      @connection ||= ActiveRecord::Connection.new
+    end
   end
 end
 
@@ -35,10 +54,10 @@ describe ServerHealthCheck do
   describe 'typical use case' do
     context 'when all is well' do
       before do
-        Redis.send(:define_method, :ping) { true }
-        ActiveRecord::Base.send(:define_singleton_method, :connection) { true }
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Redis).to receive(:ping).and_return(true)
+        allow(ActiveRecord::Base.connection).to receive(:active?).and_return(true)
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'reports OK' do
@@ -63,10 +82,11 @@ describe ServerHealthCheck do
 
     context 'when only one check fails' do
       before do
-        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
-        allow(ActiveRecord::Base).to receive(:connection).and_raise(StandardError.new("DB error"))
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Redis).to receive(:ping).and_raise(Redis::CannotConnectError)
+        connection_double = double
+        allow(ActiveRecord::Base.connection).to receive(:active?).and_raise(StandardError.new("DB error"))
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'reports failure' do
@@ -94,10 +114,8 @@ describe ServerHealthCheck do
 
   describe "#redis!" do
     context "when redis gem is not loaded" do
-      around do |example|
-        redis = Object.send(:remove_const, :Redis)
-        example.run
-        Object.send(:const_set, :Redis, redis)
+      before do
+        hide_const("Redis")
       end
 
       it 'raises an execpetion' do
@@ -122,7 +140,7 @@ describe ServerHealthCheck do
 
     context "when redis is not reachable" do
       before do
-        Redis.send(:define_method, :ping) { raise Redis::CannotConnectError }
+        allow_any_instance_of(Redis).to receive(:ping).and_raise(Redis::CannotConnectError)
       end
 
       it 'returns false' do
@@ -147,7 +165,7 @@ describe ServerHealthCheck do
 
     context "when redis is connected" do
       before do
-        Redis.send(:define_method, :ping) { true }
+        allow_any_instance_of(Redis).to receive(:ping).and_return(true)
       end
 
       it 'returns true' do
@@ -173,10 +191,8 @@ describe ServerHealthCheck do
 
   describe "#active_record!" do
     context "when Active Record gem is not loaded" do
-      around do |example|
-        active_record = Object.send(:remove_const, :ActiveRecord)
-        example.run
-        Object.send(:const_set, :ActiveRecord, active_record)
+      before do
+        hide_const("ActiveRecord")
       end
 
       it 'raises an execpetion' do
@@ -186,7 +202,7 @@ describe ServerHealthCheck do
 
     context "when database is not reachable" do
       before do
-        allow(ActiveRecord::Base).to receive(:connection).and_raise(StandardError.new("DB: error"))
+        allow(ActiveRecord::Base.connection).to receive(:active?).and_raise(StandardError.new("DB: error"))
       end
 
       it 'returns false' do
@@ -204,14 +220,39 @@ describe ServerHealthCheck do
         it 'returns a hash with string results' do
           health_check.active_record!
           results = health_check.results
-          expect(results).to eq active_record: 'Failed: unable to connect to database'
+          expect(results).to eq active_record: 'Failed: error while connecting to database'
+        end
+      end
+    end
+
+    context "when database connection is not active when retrieved" do
+      before do
+        allow(ActiveRecord::Base.connection).to receive(:active?).and_return(false)
+      end
+
+      it "returns false" do
+        expect(health_check.active_record!).to eq false
+      end
+
+      describe "#ok?" do
+        it "returns false" do
+          health_check.active_record!
+          expect(health_check.ok?).to eq false
+        end
+      end
+
+      describe "#results" do
+        it "returns a hash with string results" do
+          health_check.active_record!
+          results = health_check.results
+          expect(results).to eq active_record: "Failed: unable to connect to database"
         end
       end
     end
 
     context "when database is reachable" do
       before do
-        ActiveRecord::Base.send(:define_singleton_method, :connection) { true }
+        allow(ActiveRecord::Base.connection).to receive(:active?).and_return(true)
       end
 
       it 'returns true' do
@@ -237,10 +278,8 @@ describe ServerHealthCheck do
 
   describe "#aws_s3!" do
     context "when aws-sdk gem is not loaded" do
-      around do |example|
-        aws = Object.send(:remove_const, :Aws)
-        example.run
-        Object.send(:const_set, :Aws, aws)
+      before do
+        hide_const("Aws")
       end
 
       it 'raises an execpetion' do
@@ -250,7 +289,7 @@ describe ServerHealthCheck do
 
     context "when bucket does not exist" do
       before do
-        Aws::S3::Bucket.send(:define_method, :exists?) { false }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(false)
       end
 
       it 'returns false' do
@@ -275,7 +314,7 @@ describe ServerHealthCheck do
 
     context "when bucket exist" do
       before do
-        Aws::S3::Bucket.send(:define_method, :exists?) { true }
+        allow_any_instance_of(Aws::S3::Bucket).to receive(:exists?).and_return(true)
       end
 
       it 'returns true' do
@@ -301,10 +340,8 @@ describe ServerHealthCheck do
 
   describe "#aws_creds!" do
     context "when aws-sdk gem is not loaded" do
-      around do |example|
-        aws = Object.send(:remove_const, :Aws)
-        example.run
-        Object.send(:const_set, :Aws, aws)
+      before do
+        hide_const("Aws")
       end
 
       it 'raises an execpetion' do
@@ -314,7 +351,7 @@ describe ServerHealthCheck do
 
     context "when access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::InvalidAccessKeyId }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(Aws::S3::Errors::InvalidAccessKeyId)
       end
 
       it 'returns false' do
@@ -339,7 +376,7 @@ describe ServerHealthCheck do
 
     context "when secret access key is invalid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise Aws::S3::Errors::SignatureDoesNotMatch }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(Aws::S3::Errors::SignatureDoesNotMatch)
       end
 
       it 'returns false' do
@@ -364,7 +401,7 @@ describe ServerHealthCheck do
 
     context "when no keys are set" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { raise NoMethodError }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_raise(NoMethodError)
       end
 
       it 'returns false' do
@@ -389,7 +426,7 @@ describe ServerHealthCheck do
 
     context "when login is valid" do
       before do
-        Aws::S3::Client.send(:define_method, :list_buckets) { true }
+        allow_any_instance_of(Aws::S3::Client).to receive(:list_buckets).and_return(true)
       end
 
       it 'returns true' do
